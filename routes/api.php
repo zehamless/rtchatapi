@@ -13,4 +13,9 @@ Route::post('logout', [\App\Http\Controllers\AuthController::class, 'logout'])->
 Route::post('get-reset-token', [\App\Http\Controllers\AuthController::class, 'getResetToken'])->name('get-reset-token');
 Route::post('reset-password', [\App\Http\Controllers\AuthController::class, 'resetPassword'])->name('reset-password')->middleware('ability:password-update');
 });
-
+Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
+Route::apiResource('conversations', \App\Http\Controllers\ConversationController::class);
+Route::get('messages/{conversation}', [\App\Http\Controllers\MessageController::class, 'index'])->name('messages.index');
+Route::post('messages', [\App\Http\Controllers\MessageController::class, 'store'])->name('messages.store');
+Route::delete('messages/{message}', [\App\Http\Controllers\MessageController::class, 'destroy'])->name('messages.destroy');
+});

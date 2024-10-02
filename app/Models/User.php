@@ -45,4 +45,10 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+    public function conversations()
+    {
+        return $this->belongsToMany(Conversation::class, 'user_conversations')
+            ->withPivot('is_archieve')
+            ->withTimestamps();
+    }
 }
