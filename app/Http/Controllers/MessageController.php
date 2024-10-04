@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\MessageSentEvent;
 use App\Http\Requests\MessageRequest;
 use App\Http\Resources\MessageResource;
 use App\Models\Conversation;
@@ -24,6 +25,7 @@ public function store(MessageRequest $request)
 {
     $validated = $request->validated();
     $validated['sender_id'] = $request->user()->id;
+    $validated['sent_at'] = now();
 
     if (empty($validated['conversation_id']) && empty($validated['receiver_id'])) {
         return response()->json(['error' => 'Receiver ID is required if conversation ID is not provided'], 422);
@@ -32,20 +34,32 @@ public function store(MessageRequest $request)
     try {
         \DB::beginTransaction();
 
+        $conversation = empty($validated['conversation_id'])
+            ? Conversation::create()
+            : Conversation::find($validated['conversation_id']);
+
         if (empty($validated['conversation_id'])) {
-            $conversation = Conversation::create();
             $validated['conversation_id'] = $conversation->id;
-            User::find($validated['receiver_id'])->conversations()->attach($conversation->id);
+            $receiver = User::find($validated['receiver_id']);
+            $receiver->conversations()->attach($conversation->id);
             $request->user()->conversations()->attach($conversation->id);
         }
 
         $message = Message::create($validated);
+
+        try {
+            event(new MessageSentEvent($conversation));
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            return response()->json(['error' => 'Failed to dispatch event', 'log' => $e->getMessage()], 500);
+        }
+
         \DB::commit();
 
         return new MessageResource($message);
     } catch (\Exception $e) {
         \DB::rollBack();
-        return response()->json(['error' => 'Failed to store message'], 500);
+        return response()->json(['error' => 'Failed to store message', 'log' => $e->getMessage()], 500);
     }
 }
 

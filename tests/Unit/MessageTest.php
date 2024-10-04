@@ -1,5 +1,6 @@
 <?php
 
+use App\Events\MessageSentEvent;
 use App\Http\Requests\MessageRequest;
 use App\Models\Conversation;
 use App\Models\Message;
@@ -21,7 +22,6 @@ it('stores message successfully', function () {
     ];
 
     $response = $this->postJson(route('messages.store'), $data);
-
     $response->assertStatus(201)
         ->assertJsonStructure(['data' => ['id', 'content', 'sender_id', 'conversation_id']]);
 });
@@ -57,7 +57,7 @@ it('uses existing conversation when storing message', function () {
     ];
 
     $response = $this->postJson(route('messages.store'), $data);
-
+//dd($response->getContent());
     $response->assertStatus(201);
     expect($response->json('data.conversation_id'))->toBe($conversation->id);
 });
@@ -215,4 +215,33 @@ it('returns not found when fetching messages for a non-existent conversation wit
     $response = $this->getJson(route('messages.index', 999));
 
     $response->assertStatus(404);
+});
+it('broadcasts MessageSentEvent when a message is stored', function () {
+    Event::fake();
+
+    $user = User::factory()->create();
+    $receiver = User::factory()->create();
+    $this->actingAs($user);
+
+    $response = $this->postJson(route('messages.store'), [
+        'content' => 'Hello, World!',
+        'receiver_id' => $receiver->id,
+    ]);
+//dd($response->getContent());
+    $response->assertStatus(201);
+    Event::assertDispatched(MessageSentEvent::class);
+});
+
+it('does not broadcast MessageSentEvent when storing a message fails', function () {
+    Event::fake();
+
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $response = $this->postJson(route('messages.store'), [
+        'content' => 'Hello, World!',
+    ]);
+
+    $response->assertStatus(422);
+    Event::assertNotDispatched(MessageSentEvent::class);
 });
