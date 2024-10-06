@@ -245,3 +245,30 @@ it('does not broadcast MessageSentEvent when storing a message fails', function 
     $response->assertStatus(422);
     Event::assertNotDispatched(MessageSentEvent::class);
 });
+it('creates group conversation successfully', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    $data = [
+        'name' => 'Group Chat',
+        'description' => 'A new group chat',
+    ];
+
+    $response = $this->postJson(route('conversations.store'), $data);
+//dd($response->getContent());
+    $response->assertStatus(201);
+    $this->assertDatabaseHas('conversations', ['name' => 'Group Chat', 'is_group' => true]);
+    $this->assertDatabaseHas('user_conversations', ['user_id' => $user->id]);
+});
+
+
+it('fails to create group conversation when not authenticated', function () {
+    $data = [
+        'name' => 'Group Chat',
+        'description' => 'A new group chat',
+    ];
+
+    $response = $this->postJson(route('conversations.store'), $data);
+
+    $response->assertStatus(401);
+});

@@ -21,8 +21,21 @@ class ConversationController extends Controller
 
     public function store(ConversationRequest $request)
     {
-        $this->authorize('create', Conversation::class);
-        return new ConversationResource(Conversation::create($request->validated()));
+        try {
+            \DB::beginTransaction();
+            $validated = $request->validated();
+            $validated['is_group'] = true;
+            $conversation = Conversation::create($validated);
+
+            $conversation->users()->attach(request()->user());
+
+            \DB::commit();
+
+            return response()->json(['conversation_id' => $conversation->id], 201);
+        } catch (\Exception $e) {
+            \DB::rollBack();
+            return response()->json(['error' => 'Failed to create group conversation', 'log' => $e->getMessage()], 500);
+        }
     }
 
     public function show(Conversation $conversation)
