@@ -10,7 +10,6 @@ class ConversationRequest extends FormRequest
     {
         return [
             'name' => ['nullable'],
-            'is_group' => ['boolean'],
             'description' => ['nullable'],
         ];
     }

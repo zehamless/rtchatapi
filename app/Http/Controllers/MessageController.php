@@ -47,7 +47,6 @@ class MessageController extends Controller
             }
 
             $message = Message::create($validated);
-
             try {
                 event(new MessageSentEvent($conversation));
             } catch (\Exception $e) {

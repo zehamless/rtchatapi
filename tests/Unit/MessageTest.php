@@ -37,7 +37,6 @@ it('creates new conversation when storing message', function () {
     ];
 
     $response = $this->postJson(route('messages.store'), $data);
-
     $response->assertStatus(201);
     $this->assertDatabaseHas('conversations', ['id' => $response->json('data.conversation_id')]);
 });
